@@ -3,32 +3,38 @@ import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { PrismaService } from '../../integrations/prisma/prisma/prisma.service';
 import { DomainException } from '../exceptions/domain.exception';
-
+import { BcryptCriptografy } from 'src/integrations/bcrypt/bcrypt.criptografy';
 @Injectable()
 export class UsuariosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService,
+    private readonly bcrypt: BcryptCriptografy
+  ) {}
   async createAsync(createUsuarioDto: CreateUsuarioDto) {
+    const usuario =  {
+      ...createUsuarioDto,
+      senha: await this.bcrypt.hash(createUsuarioDto.senha),
+    }
     const date = new Date();
 
-    let usuarioBanco = await this.findOneByEmailAsync(createUsuarioDto.email);
+    let usuarioBanco = await this.findByEmailAsync(createUsuarioDto.email);
     if(usuarioBanco){
       throw new DomainException('Usuário já cadastrado');
     } 
-    const usuario = await this.prisma.usuario.create({
+    const usuarioCriado = await this.prisma.usuario.create({
       data: {
-        ...createUsuarioDto,
-        carteira: {
-          create: undefined
-        }
+        ...usuario,
+        carteira:{
+          create:{}
+        },
       }
     })
     const user = undefined;
     this.prisma.$disconnect();
-    if(!usuario){
+    if(!usuarioCriado){
       throw new DomainException('Erro ao criar usuário');
     }
 
-    return  usuario.id
+    return  usuarioCriado.id
   }
 
   async findAllAsync() {
@@ -69,7 +75,7 @@ export class UsuariosService {
     });
   }
 
-  async findOneByEmailAsync(email: string, ativo: boolean = true) {
+  async findByEmailAsync(email: string, ativo: boolean = true) {
     return await this.prisma.usuario.findUnique({
       where: {
         email
@@ -112,7 +118,7 @@ export class UsuariosService {
 
 
   async restore(email: string) {
-    const user = await this.findOneByEmailAsync(email, false);
+    const user = await this.findByEmailAsync(email, false);
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
