@@ -47,7 +47,12 @@ export class UsuariosService {
         nome: true,
         email: true,
         criadoEm: true,
-        atualizadoEm: true
+        atualizadoEm: true,
+        carteira: {
+          select:{
+            id: true,
+          }
+        }
       }
 
     });
@@ -78,20 +83,17 @@ export class UsuariosService {
   async findByEmailAsync(email: string, ativo: boolean = true) {
     return await this.prisma.usuario.findUnique({
       where: {
-        email
+        email,
+        ativo: true
       },
       select:{
         id: true,
         nome: true,
         email: true,
-        criadoEm: true,
         senha: true,
-        atualizadoEm: true,
-        ativo: true,
         carteira:{
           select:{
             id: true,
-            saldo: true
           }
         }
       }
@@ -132,14 +134,14 @@ export class UsuariosService {
 
 
 
-  async restore(email: string) {
-    const user = await this.findByEmailAsync(email, false);
+  async restore(id: string) {
+    const user = await this.findOneAsync(id, false);
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
     await this.prisma.usuario.update({
       where: {
-        email
+        id
       },
       data: {
         ativo: true

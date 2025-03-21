@@ -5,6 +5,7 @@ import { PrismaService } from 'src/integrations/prisma/prisma/prisma.service';
 import { CarteiraService } from '../carteira/carteira.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { CarteiraDevolucaoDto } from './dto/carteira-devolucao.dto';
 
 @Injectable()
 export class TransacaoService {
@@ -90,8 +91,42 @@ export class TransacaoService {
     return transacao;
   }
 
-  async findAll() {
-    return await this.prisma.transacao.findMany();
+  async findAll(usuarioId: string) : Promise<CarteiraDevolucaoDto> {
+    const carteiras = await this.carteiraService.ListarCarteirasUsuario(usuarioId);
+    const carteiraIds = carteiras.map(carteira => carteira.id);
+    const transacao=  await this.prisma.transacao.findMany({
+      where: {
+        devolucao: false,
+        carteiraOrigemId: {
+          in: carteiraIds
+        },
+      },
+      include:{
+        carteiraDestino: {
+          include: {
+            usuario: {
+              select: {
+                nome: true,
+                email: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return {
+      transacoes: transacao.map(t => ({
+        id: t.id,
+        valor: t.valor,
+        nomeUsuarioDestino: t.carteiraDestino.usuario.nome,
+        emailUsuarioDestino: t.carteiraDestino.usuario.email,
+        carteiraDestinoId: t.carteiraDestinoId,
+        data: t.data
+      }))
+    }
+
+    
   }
 
   async findAllByUserId() {
@@ -148,15 +183,4 @@ export class TransacaoService {
     ])
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} transacao`;
-  }
-
-  update(id: number, updateTransacaoDto: UpdateTransacaoDto) {
-    return `This action updates a #${id} transacao`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} transacao`;
-  }
 }

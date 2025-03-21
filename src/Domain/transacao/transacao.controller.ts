@@ -1,40 +1,39 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, Query, UseGuards } from '@nestjs/common';
 import { TransacaoService } from './transacao.service';
 import { CreateTransacaoDto } from './dto/create-transacao.dto';
 import { UpdateTransacaoDto } from './dto/update-transacao.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { CurrentUserDto } from '../auth/dto/current-user.dto';
 
 @Controller('transacao')
 export class TransacaoController {
   constructor(private readonly transacaoService: TransacaoService) {}
 
   @Post('transferir')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(201)
   @HttpCode(404)
-  async transferirAsync(@Query('usuarioId') usuarioId: string, @Query('carteiraIdOrigem') carteiraIdOrigem: string, @Query('carteiraIdDestino') carteiraIdDestino: string, @Query('valor') valor: number) {
-    return await this.transacaoService.transferirAsync(usuarioId, carteiraIdOrigem, carteiraIdDestino, valor);
+  async transferirAsync(@CurrentUser() user: CurrentUserDto, @Query('carteiraIdOrigem') carteiraIdOrigem: string, @Query('carteiraIdDestino') carteiraIdDestino: string, @Query('valor') valor: number) {
+    return await this.transacaoService.transferirAsync(user.id, carteiraIdOrigem, carteiraIdDestino, valor);
   }
 
   @Post('devolver')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(201)
   @HttpCode(404)
-  async devolverAsync(@Query('usuarioId') usuarioId: string, @Query('transacaoId') transacaoId: string) {
-    return await this.transacaoService.devolucaoTransacao(usuarioId, transacaoId);
+  async devolverAsync(@CurrentUser() user: CurrentUserDto, @Query('transacaoId') transacaoId: string) {
+    return await this.transacaoService.devolucaoTransacao(user.id, transacaoId);
   }
 
 
   @Get()
-  findAll() {
-    return this.transacaoService.findAll();
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  findAll(@CurrentUser() user: CurrentUserDto) {
+    return this.transacaoService.findAll(user.id);
   }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.transacaoService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTransacaoDto: UpdateTransacaoDto) {
-    return this.transacaoService.update(+id, updateTransacaoDto);
-  }
-
 }

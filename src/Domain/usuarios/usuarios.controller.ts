@@ -1,8 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, NotFoundException, UseGuards } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { ControllerAdvice } from 'src/controller-advice/controller.advice';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUserDto } from '../auth/dto/current-user.dto';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('usuarios')
 export class UsuariosController {
@@ -22,46 +26,55 @@ export class UsuariosController {
   }
 
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   async findAllAsync() {
     return await this.usuariosService.findAllAsync();
   }
 
-  @Get(':id')
+  @Get(':email')
+  @ApiBearerAuth()
   @HttpCode(404)
-  async findOneAsync(@Param('id') id: string) {
-    const usuario = await this.usuariosService.findOneAsync(id);
+  async findOneAsync(@Param('email') email: string) {
+    const usuario = await this.usuariosService.findByEmailAsync(email);
     if (!usuario) {
       throw new NotFoundException('Usuário não encontrado');
     }
-    return usuario;
+    return {
+      ...usuario,
+      senha: undefined,
+    };
   }
 
-  @Patch(':id')
+  @Patch()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @HttpCode(204)
   @HttpCode(404)
-  async updateAsync(@Param('id') id: string, @Body() updateUsuarioDto: UpdateUsuarioDto) {
+  async updateAsync(@CurrentUser() user: CurrentUserDto, @Body() updateUsuarioDto: UpdateUsuarioDto) {
     try{
-      await this.usuariosService.update(id, updateUsuarioDto);
+      await this.usuariosService.update(user.id, updateUsuarioDto);
     }catch(e){
       console.log("erro", e);
       throw e;
     }
   }
 
-  @Delete(':id')
+  @Delete()
   @HttpCode(204)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @HttpCode(404)
-  async removeAsync(@Param('id') id: string) {
-    const usuario = await this.usuariosService.remove(id);
-    if (!usuario) {
-      throw new NotFoundException('Usuário não encontrado');
-    }
+  async removeAsync(@CurrentUser() user: CurrentUserDto) {
+     await this.usuariosService.remove(user.id);
   }
 
-  @Post('restaura/:email')
+  @Post('restaurar')
   @HttpCode(201)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @HttpCode(404)
-  async restaurarUsuario(@Param('email') email: string) {
-    return await this.usuariosService.restore(email);
+  async restaurarUsuario(@CurrentUser() user: CurrentUserDto) {
+    return await this.usuariosService.restore(user.id);
   }
 }

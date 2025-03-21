@@ -1,7 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, HttpCode, UseGuards } from '@nestjs/common';
 import { CarteiraService } from './carteira.service';
 import { CreateCarteiraDto } from './dto/create-carteira.dto';
 import { UpdateCarteiraDto } from './dto/update-carteira.dto';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { CurrentUserDto } from '../auth/dto/current-user.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('carteira')
 export class CarteiraController {
@@ -9,30 +13,35 @@ export class CarteiraController {
   constructor(private readonly carteiraService: CarteiraService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(201)
   @HttpCode(404)
-  async createAsync(@Query('usuarioId') usuarioId: string) {
-    return await this.carteiraService.createAsync(usuarioId);
+  async createAsync(@CurrentUser() user: CurrentUserDto) {
+    return await this.carteiraService.createAsync(user.id);
   }
 
   @Post('depositar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(201)
   @HttpCode(404)
-  async depositarAsync(@Query('usuarioId') usuarioId: string, @Query('carteiraId') carteiraId: string, @Query('valor') valor: number) {
-    return await this.carteiraService.depositarAsync(usuarioId, carteiraId, valor);
+  async depositarAsync(@CurrentUser() user: CurrentUserDto, @Query('carteiraId') carteiraId: string, @Query('valor') valor: number) {
+    return await this.carteiraService.depositarAsync(user.id, carteiraId, valor);
   }
 
-
-
-
-  @Get('usuario/:usuarioId')
-  findAll(@Param('usuarioId') usuarioId: string) {
-    return this.carteiraService.ListarCarteirasUsuario(usuarioId);
+  @Get('usuario')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  findAll(@CurrentUser() user: CurrentUserDto) {
+    return this.carteiraService.ListarCarteirasUsuario(user.id);
   }
 
-  @Get(':carteiraId/:usuarioId')
-  findOne(@Param('carteiraId') carteiraId: string, @Param('usuarioId') usuarioId: string) {
-    return this.carteiraService.ListarCarteiraUsuario(usuarioId, carteiraId);
+  @Get(':carteiraId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  findOne(@Param('carteiraId') carteiraId: string,@CurrentUser() user: CurrentUserDto) {
+    return this.carteiraService.ListarCarteiraUsuario(user.id, carteiraId);
   }
 
 }
