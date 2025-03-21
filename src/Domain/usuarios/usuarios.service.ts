@@ -79,6 +79,21 @@ export class UsuariosService {
     return await this.prisma.usuario.findUnique({
       where: {
         email
+      },
+      select:{
+        id: true,
+        nome: true,
+        email: true,
+        criadoEm: true,
+        senha: true,
+        atualizadoEm: true,
+        ativo: true,
+        carteira:{
+          select:{
+            id: true,
+            saldo: true
+          }
+        }
       }
     });
   }

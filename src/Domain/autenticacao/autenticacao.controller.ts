@@ -10,7 +10,7 @@ export class AutenticacaoController {
   @HttpCode(201)
   @UseGuards(LocalAuthGuard)
   async login() {
-    // return this.autenticacaoService.login();
+    
   }
 
 }
